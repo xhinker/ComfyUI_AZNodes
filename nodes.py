@@ -40,7 +40,11 @@ class AZ_SplitAVLatent:
         try:
             from comfy import nested_tensor
             if isinstance(samples, nested_tensor.NestedTensor):
-                tensors = list(samples)
+                # NestedTensor stores components in .tensors (NOT via list():
+                # list() falls back to __getitem__ which slices a NestedTensor,
+                # so list(samples) yields 1 NestedTensor slice -> IndexError ->
+                # the except fallback wrongly passed the WHOLE AV latent through).
+                tensors = samples.tensors if hasattr(samples, "tensors") else samples.unbind()
                 if len(tensors) < 2:
                     raise ValueError("NestedTensor does not contain both video and audio tensors")
                 video_tensor = tensors[0]
